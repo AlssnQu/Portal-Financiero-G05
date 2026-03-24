@@ -7,10 +7,58 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
   <link href="../css/styles.css" rel="stylesheet">
+  <!-- Chart.js para el gráfico de distribución -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <!-- Estilos propios del módulo 5 (se separarán a prestamos.css) -->
+  <style>
+    /* ── Tabla de amortización (solo visible al imprimir) ── */
+    @media print {
+      body * { visibility: hidden; }
+      #seccionAmortizacion, #seccionAmortizacion * { visibility: visible; }
+      #seccionAmortizacion { position: fixed; inset: 0; padding: 2rem; }
+      .btn-imprimir-hide { display: none !important; }
+    }
+
+    /* ── Alerta de capacidad de pago ── */
+    #alertaIngresos { display: none; }
+
+    /* ── Etapas del estado de solicitud ── */
+    .etapa-item {
+      display: flex;
+      align-items: flex-start;
+      gap: .75rem;
+      padding: .6rem 0;
+    }
+    .etapa-icono {
+      width: 2rem;
+      height: 2rem;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: .9rem;
+    }
+    .etapa-icono.completada  { background: #d1fae5; color: #065f46; }
+    .etapa-icono.activa      { background: #fef3c7; color: #92400e; }
+    .etapa-icono.pendiente-e { background: #f3f4f6; color: #9ca3af; }
+    .etapa-linea {
+      width: 2px;
+      height: 1.2rem;
+      background: #e5e7eb;
+      margin-left: .9375rem;
+    }
+    .etapa-linea.completada  { background: #6ee7b7; }
+
+    /* ── Gráfico ── */
+    #chartWrapper { position: relative; height: 180px; }
+  </style>
 </head>
 <body>
 
-<!-- Toast -->
+<!-- ═══════════════════════════════════════════════════════
+     TOAST
+════════════════════════════════════════════════════════ -->
 <div class="toast-container position-fixed bottom-0 end-0 p-3">
   <div id="appToast" class="toast align-items-center text-white bg-success border-0">
     <div class="d-flex">
@@ -20,7 +68,9 @@
   </div>
 </div>
 
-<!-- Modal de solicitud enviada -->
+<!-- ═══════════════════════════════════════════════════════
+     MODAL — Solicitud enviada (RF-25)
+════════════════════════════════════════════════════════ -->
 <div class="modal fade" id="modalExito" tabindex="-1" data-bs-backdrop="static">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content text-center p-4">
@@ -43,6 +93,14 @@
           </div>
         </div>
         <p class="text-muted small">Te notificaremos el resultado en un plazo de 24 a 48 horas hábiles.</p>
+
+        <!-- Números de ayuda dentro del modal de éxito -->
+        <div class="alert alert-info py-2 px-3 mb-0 text-start small">
+          <i class="bi bi-headset me-1"></i>
+          <strong>¿Alguna duda?</strong>
+          Llámanos al <strong>0800-00-000</strong> (gratuito) o escríbenos al
+          <strong>(01) 615-0000</strong> — Lun. a Vie. 8 am – 8 pm.
+        </div>
       </div>
       <div class="modal-footer border-0 justify-content-center">
         <button class="btn btn-primary" data-bs-dismiss="modal">Entendido</button>
@@ -51,7 +109,96 @@
   </div>
 </div>
 
-<!-- Navbar -->
+<!-- ═══════════════════════════════════════════════════════
+     MODAL — Estado de solicitud (MEJORA)
+════════════════════════════════════════════════════════ -->
+<div class="modal fade" id="modalEstado" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content p-3">
+      <div class="modal-header border-0 pb-0">
+        <h6 class="modal-title fw-bold">
+          <i class="bi bi-activity me-2 text-primary"></i>Estado de tu solicitud
+        </h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body pt-2">
+        <!-- Info resumida de la solicitud -->
+        <div class="bg-light rounded p-2 mb-3 small">
+          <div class="row g-1">
+            <div class="col-5 text-muted">N° Solicitud:</div>
+            <div class="col-7 fw-bold font-monospace text-primary" id="estadoNumSolicitud">—</div>
+            <div class="col-5 text-muted">Monto:</div>
+            <div class="col-7 fw-semibold" id="estadoMonto">—</div>
+            <div class="col-5 text-muted">Fecha:</div>
+            <div class="col-7" id="estadoFecha">—</div>
+          </div>
+        </div>
+
+        <!-- Línea de tiempo de etapas -->
+        <p class="small text-muted mb-2">Etapas del proceso:</p>
+        <div id="etapasContainer">
+          <!-- Se genera por JS según el estado de la solicitud -->
+        </div>
+
+        <!-- Nota informativa -->
+        <div class="alert alert-light border small py-2 mt-3 mb-0">
+          <i class="bi bi-info-circle me-1 text-primary"></i>
+          El proceso de evaluación puede tardar entre 24 y 48 horas hábiles.
+          Si tienes dudas llama al <strong>0800-00-000</strong> (gratuito).
+        </div>
+      </div>
+      <div class="modal-footer border-0 pt-0">
+        <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     MODAL — Tabla de amortización (MEJORA — Imprimir / PDF)
+════════════════════════════════════════════════════════ -->
+<div class="modal fade" id="modalAmortizacion" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title fw-bold">
+          <i class="bi bi-table me-2 text-primary"></i>Tabla de Amortización
+        </h6>
+        <button type="button" class="btn-close btn-imprimir-hide" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-0" id="seccionAmortizacion">
+        <div class="px-3 pt-3 pb-1 border-bottom small text-muted" id="encabezadoAmort">
+          <!-- Se rellena por JS -->
+        </div>
+        <div style="max-height:420px;overflow-y:auto">
+          <table class="table table-sm table-hover table-striped mb-0 small">
+            <thead class="table-light sticky-top">
+              <tr>
+                <th>Cuota</th>
+                <th>Capital</th>
+                <th>Interés</th>
+                <th>Cuota Total</th>
+                <th>Saldo</th>
+              </tr>
+            </thead>
+            <tbody id="tablaAmortBody">
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer btn-imprimir-hide">
+        <button class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+        <button class="btn btn-primary btn-sm" id="btnImprimir">
+          <i class="bi bi-printer me-1"></i>Imprimir / Guardar PDF
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     NAVBAR
+════════════════════════════════════════════════════════ -->
 <nav class="navbar navbar-expand-lg navbar-banco">
   <div class="container-fluid px-4">
     <a class="navbar-brand" href="dashboard.html"><i class="bi bi-bank me-2"></i>MI BANCO</a>
@@ -70,6 +217,9 @@
   </div>
 </nav>
 
+<!-- ═══════════════════════════════════════════════════════
+     LAYOUT PRINCIPAL
+════════════════════════════════════════════════════════ -->
 <div class="portal-layout">
   <nav class="sidebar d-none d-lg-block">
     <ul class="nav flex-column">
@@ -87,7 +237,7 @@
 
     <div class="row g-4">
 
-      <!-- Simulador -->
+      <!-- ── Simulador (col izquierda) ─────────────────── -->
       <div class="col-12 col-lg-5">
         <div class="card border-0 shadow-sm">
           <div class="card-header bg-white border-0 pt-3">
@@ -95,6 +245,7 @@
           </div>
           <div class="card-body">
 
+            <!-- Slider de monto -->
             <div class="mb-4">
               <div class="d-flex justify-content-between mb-1">
                 <label class="form-label fw-semibold mb-0">Monto del préstamo</label>
@@ -107,6 +258,7 @@
               </div>
             </div>
 
+            <!-- Plazo -->
             <div class="mb-4">
               <label class="form-label fw-semibold">Plazo en meses</label>
               <select id="selectPlazo" class="form-select">
@@ -120,6 +272,7 @@
               </select>
             </div>
 
+            <!-- Tasa -->
             <div class="mb-4">
               <label class="form-label fw-semibold">Tasa de interés anual</label>
               <select id="selectTasa" class="form-select">
@@ -148,20 +301,77 @@
               </div>
             </div>
 
+            <!-- ── MEJORA: Gráfico de distribución Capital / Interés ── -->
+            <div class="mt-3">
+              <p class="small fw-semibold mb-2 text-muted">
+                <i class="bi bi-pie-chart me-1"></i>Distribución del pago total
+              </p>
+              <div id="chartWrapper">
+                <canvas id="chartDistribucion"></canvas>
+              </div>
+              <div class="d-flex justify-content-center gap-3 mt-2" style="font-size:.75rem">
+                <span><span class="badge" style="background:#3b82f6">&nbsp;</span> Capital</span>
+                <span><span class="badge" style="background:#f59e0b">&nbsp;</span> Intereses</span>
+              </div>
+            </div>
+
+            <!-- ── MEJORA: Botón tabla de amortización ── -->
+            <div class="mt-3 d-grid">
+              <button class="btn btn-outline-primary btn-sm" id="btnVerAmortizacion">
+                <i class="bi bi-table me-1"></i>Ver / Descargar Tabla de Amortización
+              </button>
+            </div>
+
           </div>
         </div>
-      </div>
 
-      <!-- Formulario de solicitud -->
+        <!-- ── MEJORA: Sección de números de ayuda ── -->
+        <div class="card border-0 shadow-sm mt-4">
+          <div class="card-header bg-white border-0 pt-3 pb-2">
+            <h6 class="fw-bold mb-0 small">
+              <i class="bi bi-headset me-2 text-primary"></i>¿Necesitas ayuda?
+            </h6>
+          </div>
+          <div class="card-body py-2">
+            <ul class="list-unstyled mb-0 small">
+              <li class="py-1 border-bottom">
+                <i class="bi bi-telephone-fill text-success me-2"></i>
+                <strong>0800-00-000</strong>
+                <span class="text-muted ms-1">— Línea gratuita (Lun–Vie 8am–8pm)</span>
+              </li>
+              <li class="py-1 border-bottom">
+                <i class="bi bi-telephone text-primary me-2"></i>
+                <strong>(01) 615-0000</strong>
+                <span class="text-muted ms-1">— Lima y provincias</span>
+              </li>
+              <li class="py-1 border-bottom">
+                <i class="bi bi-whatsapp text-success me-2"></i>
+                <strong>+51 999 000 000</strong>
+                <span class="text-muted ms-1">— WhatsApp (24/7)</span>
+              </li>
+              <li class="py-1">
+                <i class="bi bi-envelope-fill text-warning me-2"></i>
+                <strong>prestamos@mibanco.pe</strong>
+                <span class="text-muted ms-1">— Correo electrónico</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+      </div><!-- /col simulador -->
+
+      <!-- ── Formulario de solicitud (col derecha) ─────── -->
       <div class="col-12 col-lg-7">
         <div class="card border-0 shadow-sm">
           <div class="card-header bg-white border-0 pt-3">
-            <h6 class="fw-bold mb-0"><i class="bi bi-file-earmark-text me-2 text-primary"></i>Formulario de solicitud</h6>
+            <h6 class="fw-bold mb-0">
+              <i class="bi bi-file-earmark-text me-2 text-primary"></i>Formulario de solicitud
+            </h6>
           </div>
           <div class="card-body">
             <form id="formPrestamo" novalidate>
 
-              <!-- Datos del simulador (pre-llenados, solo lectura) -->
+              <!-- Datos del simulador — pre-llenados (RF-23) -->
               <div class="row g-3 mb-3">
                 <div class="col-6">
                   <label class="form-label small fw-semibold">Monto solicitado</label>
@@ -189,6 +399,7 @@
 
               <hr>
 
+              <!-- Propósito -->
               <div class="mb-3">
                 <label class="form-label fw-semibold">Propósito del préstamo</label>
                 <select id="proposito" class="form-select" required>
@@ -203,6 +414,7 @@
                 </select>
               </div>
 
+              <!-- Ingresos mensuales -->
               <div class="mb-3">
                 <label class="form-label fw-semibold">Ingresos mensuales (S/)</label>
                 <div class="input-group">
@@ -210,15 +422,26 @@
                   <input type="number" id="ingresos" class="form-control"
                          placeholder="Ej: 3000" min="0" required>
                 </div>
+                <!-- ── MEJORA: Alerta de capacidad de pago ── -->
+                <div id="alertaIngresos" class="alert alert-warning py-2 px-3 mt-2 mb-0 small">
+                  <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                  <span id="alertaIngresosTexto"></span>
+                </div>
               </div>
 
+              <!-- Confirmación de términos (RF-21 fix) -->
               <div class="mb-4">
                 <div class="form-check">
-                  <input class="form-check-input" type="checkbox" id="chkTerminos" required>
+                  <input class="form-check-input" type="checkbox" id="chkTerminos">
                   <label class="form-check-label small" for="chkTerminos">
                     Confirmo que los datos son correctos y acepto los
                     <a href="#" class="text-primary">términos y condiciones</a> del préstamo.
                   </label>
+                </div>
+                <!-- Mensaje de error del checkbox -->
+                <div id="chkError" class="text-danger small mt-1 d-none">
+                  <i class="bi bi-exclamation-circle me-1"></i>
+                  Debes aceptar los términos y condiciones para continuar.
                 </div>
               </div>
 
@@ -228,14 +451,17 @@
                   <span class="spinner-border spinner-border-sm me-2"></span>Enviando...
                 </span>
               </button>
+
             </form>
           </div>
         </div>
 
-        <!-- Solicitudes anteriores -->
+        <!-- ── Mis solicitudes (historial) ── -->
         <div class="card border-0 shadow-sm mt-4">
           <div class="card-header bg-white border-0 pt-3">
-            <h6 class="fw-bold mb-0"><i class="bi bi-list-ul me-2 text-primary"></i>Mis solicitudes</h6>
+            <h6 class="fw-bold mb-0">
+              <i class="bi bi-list-ul me-2 text-primary"></i>Mis solicitudes
+            </h6>
           </div>
           <div class="card-body p-0" id="listaSolicitudes">
             <div class="text-center py-3">
@@ -243,34 +469,147 @@
             </div>
           </div>
         </div>
-      </div>
 
-    </div>
+      </div><!-- /col formulario -->
+
+    </div><!-- /row -->
   </main>
 </div>
 
+<!-- ═══════════════════════════════════════════════════════
+     SCRIPTS
+════════════════════════════════════════════════════════ -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script type="module">
   import { supabase, requireAuth, formatSoles, formatFecha, showToast } from '../js/supabase.js';
 
+  /* ───────────────────────────────────────────────────────
+     AUTH
+  ─────────────────────────────────────────────────────── */
   const user = await requireAuth();
-  document.getElementById('userName').textContent = user.user_metadata?.full_name?.split(' ')[0] || user.email;
+  document.getElementById('userName').textContent =
+    user.user_metadata?.full_name?.split(' ')[0] || user.email;
 
   document.getElementById('btnLogout').addEventListener('click', async () => {
     await supabase.auth.signOut();
     window.location.replace('/index.html');
   });
 
-  // ── Fórmula de amortización francesa ──────────────────
-  // C = P × [r(1+r)^n] / [(1+r)^n - 1]
+  /* ───────────────────────────────────────────────────────
+     CLAVE PARA LOCALSTORAGE
+  ─────────────────────────────────────────────────────── */
+  const LS_KEY = `prestamo_simulacion_${user.id}`;
+
+  /* ───────────────────────────────────────────────────────
+     FÓRMULA DE AMORTIZACIÓN FRANCESA (RF-21)
+     C = P × [r(1+r)^n] / [(1+r)^n - 1]
+  ─────────────────────────────────────────────────────── */
   function calcularCuota(monto, plazoMeses, tasaAnual) {
-    const r = (tasaAnual / 100) / 12;    // tasa mensual
+    const r = (tasaAnual / 100) / 12;
     const n = plazoMeses;
     if (r === 0) return monto / n;
     const factor = Math.pow(1 + r, n);
     return monto * (r * factor) / (factor - 1);
   }
 
+  /* ───────────────────────────────────────────────────────
+     TABLA DE AMORTIZACIÓN
+  ─────────────────────────────────────────────────────── */
+  function generarTablaAmortizacion(monto, plazo, tasa) {
+    const r     = (tasa / 100) / 12;
+    const cuota = calcularCuota(monto, plazo, tasa);
+    let saldo   = monto;
+    const filas = [];
+
+    for (let i = 1; i <= plazo; i++) {
+      const interes  = saldo * r;
+      const capital  = cuota - interes;
+      saldo         -= capital;
+      filas.push({
+        num:      i,
+        capital:  capital,
+        interes:  interes,
+        cuota:    cuota,
+        saldo:    Math.max(0, saldo)
+      });
+    }
+    return filas;
+  }
+
+  /* ───────────────────────────────────────────────────────
+     GRÁFICO DE DISTRIBUCIÓN (Chart.js)
+  ─────────────────────────────────────────────────────── */
+  let chartInstancia = null;
+
+  function actualizarGrafico(monto, total, intereses) {
+    const ctx = document.getElementById('chartDistribucion').getContext('2d');
+    const datos = {
+      labels: ['Capital', 'Intereses'],
+      datasets: [{
+        data: [monto, intereses],
+        backgroundColor: ['#3b82f6', '#f59e0b'],
+        borderWidth: 0,
+        hoverOffset: 8
+      }]
+    };
+    if (chartInstancia) {
+      chartInstancia.data = datos;
+      chartInstancia.update();
+    } else {
+      chartInstancia = new Chart(ctx, {
+        type: 'doughnut',
+        data: datos,
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => {
+                  const val = ctx.parsed;
+                  const pct = ((val / total) * 100).toFixed(1);
+                  return ` S/ ${val.toLocaleString('es-PE', { minimumFractionDigits: 2 })} (${pct}%)`;
+                }
+              }
+            }
+          },
+          cutout: '65%'
+        }
+      });
+    }
+  }
+
+  /* ───────────────────────────────────────────────────────
+     VALIDACIÓN DE CAPACIDAD DE PAGO
+     Regla: cuota no debe superar el 35% de los ingresos
+  ─────────────────────────────────────────────────────── */
+  const RATIO_MAXIMO = 0.35;
+
+  function validarCapacidadPago(cuota, ingresos) {
+    const alertEl  = document.getElementById('alertaIngresos');
+    const textoEl  = document.getElementById('alertaIngresosTexto');
+    if (!ingresos || ingresos <= 0) { alertEl.style.display = 'none'; return true; }
+
+    const ratio   = cuota / ingresos;
+    const maxCuota = ingresos * RATIO_MAXIMO;
+
+    if (ratio > RATIO_MAXIMO) {
+      const pct = (ratio * 100).toFixed(0);
+      textoEl.innerHTML =
+        `La cuota mensual representa el <strong>${pct}%</strong> de tus ingresos. ` +
+        `Se recomienda que no supere el 35% (S/ ${formatSoles(maxCuota)} en tu caso). ` +
+        `Considera reducir el monto o ampliar el plazo.`;
+      alertEl.style.display = '';
+      return false;
+    }
+    alertEl.style.display = 'none';
+    return true;
+  }
+
+  /* ───────────────────────────────────────────────────────
+     ACTUALIZAR SIMULADOR — tiempo real (RF-21, RF-22)
+  ─────────────────────────────────────────────────────── */
   function actualizar() {
     const monto     = parseInt(document.getElementById('sliderMonto').value);
     const plazo     = parseInt(document.getElementById('selectPlazo').value);
@@ -279,29 +618,122 @@
     const total     = cuota * plazo;
     const intereses = total - monto;
 
-    document.getElementById('montoLabel').textContent  = formatSoles(monto);
-    document.getElementById('cuotaValor').textContent  = formatSoles(cuota);
-    document.getElementById('totalPagar').textContent  = formatSoles(total);
+    // Mostrar resultados
+    document.getElementById('montoLabel').textContent   = formatSoles(monto);
+    document.getElementById('cuotaValor').textContent   = formatSoles(cuota);
+    document.getElementById('totalPagar').textContent   = formatSoles(total);
     document.getElementById('totalInteres').textContent = formatSoles(intereses);
 
-    // Sincronizar con el formulario
+    // Sincronizar con formulario (RF-23)
     document.getElementById('solMonto').value = monto.toLocaleString('es-PE');
     document.getElementById('solPlazo').value = `${plazo} meses`;
     document.getElementById('solTasa').value  = `${tasa}% TEA`;
     document.getElementById('solCuota').value = cuota.toFixed(2);
+
+    // Actualizar gráfico
+    actualizarGrafico(monto, total, intereses);
+
+    // Validar capacidad si ya hay ingreso ingresado
+    const ingresos = parseFloat(document.getElementById('ingresos').value);
+    if (ingresos > 0) validarCapacidadPago(cuota, ingresos);
+
+    // ── MEJORA: Persistencia temporal en localStorage ──
+    guardarEnLS({ monto, plazo, tasa });
   }
 
-  // Escuchar cambios en el simulador
-  ['sliderMonto','selectPlazo','selectTasa'].forEach(id => {
+  // Escuchar cambios en tiempo real (RF-22)
+  ['sliderMonto', 'selectPlazo', 'selectTasa'].forEach(id => {
     document.getElementById(id).addEventListener('input', actualizar);
   });
-  actualizar(); // cálculo inicial
 
-  // ── Enviar solicitud de préstamo ───────────────────────
+  // Revalidar capacidad de pago cuando cambie el campo de ingresos
+  document.getElementById('ingresos').addEventListener('input', () => {
+    const monto  = parseInt(document.getElementById('sliderMonto').value);
+    const plazo  = parseInt(document.getElementById('selectPlazo').value);
+    const tasa   = parseFloat(document.getElementById('selectTasa').value);
+    const cuota  = calcularCuota(monto, plazo, tasa);
+    const ingresos = parseFloat(document.getElementById('ingresos').value);
+    validarCapacidadPago(cuota, ingresos);
+  });
+
+  /* ───────────────────────────────────────────────────────
+     PERSISTENCIA TEMPORAL EN LOCALSTORAGE (MEJORA)
+  ─────────────────────────────────────────────────────── */
+  function guardarEnLS(datos) {
+    try { localStorage.setItem(LS_KEY, JSON.stringify(datos)); } catch (_) {}
+  }
+
+  function restaurarDesdeLS() {
+    try {
+      const raw = localStorage.getItem(LS_KEY);
+      if (!raw) return;
+      const { monto, plazo, tasa } = JSON.parse(raw);
+      if (monto) document.getElementById('sliderMonto').value = monto;
+      if (plazo)  document.getElementById('selectPlazo').value = plazo;
+      if (tasa)   document.getElementById('selectTasa').value  = tasa;
+    } catch (_) {}
+  }
+
+  // Restaurar antes del primer cálculo
+  restaurarDesdeLS();
+  actualizar();
+
+  /* ───────────────────────────────────────────────────────
+     TABLA DE AMORTIZACIÓN — Modal
+  ─────────────────────────────────────────────────────── */
+  const modalAmort = new bootstrap.Modal(document.getElementById('modalAmortizacion'));
+
+  document.getElementById('btnVerAmortizacion').addEventListener('click', () => {
+    const monto = parseInt(document.getElementById('sliderMonto').value);
+    const plazo = parseInt(document.getElementById('selectPlazo').value);
+    const tasa  = parseFloat(document.getElementById('selectTasa').value);
+    const cuota = calcularCuota(monto, plazo, tasa);
+    const total = cuota * plazo;
+
+    // Encabezado
+    document.getElementById('encabezadoAmort').innerHTML =
+      `<strong>Monto:</strong> ${formatSoles(monto)} &nbsp;|&nbsp;
+       <strong>Plazo:</strong> ${plazo} meses &nbsp;|&nbsp;
+       <strong>Tasa:</strong> ${tasa}% TEA &nbsp;|&nbsp;
+       <strong>Cuota:</strong> ${formatSoles(cuota)} &nbsp;|&nbsp;
+       <strong>Total:</strong> ${formatSoles(total)}`;
+
+    // Filas
+    const filas = generarTablaAmortizacion(monto, plazo, tasa);
+    document.getElementById('tablaAmortBody').innerHTML = filas.map(f => `
+      <tr>
+        <td class="text-center">${f.num}</td>
+        <td>${formatSoles(f.capital)}</td>
+        <td>${formatSoles(f.interes)}</td>
+        <td class="fw-semibold">${formatSoles(f.cuota)}</td>
+        <td>${formatSoles(f.saldo)}</td>
+      </tr>
+    `).join('');
+
+    modalAmort.show();
+  });
+
+  document.getElementById('btnImprimir').addEventListener('click', () => {
+    window.print();
+  });
+
+  /* ───────────────────────────────────────────────────────
+     ENVIAR SOLICITUD (RF-24, RF-25)
+  ─────────────────────────────────────────────────────── */
   const modalExito = new bootstrap.Modal(document.getElementById('modalExito'));
 
   document.getElementById('formPrestamo').addEventListener('submit', async (e) => {
     e.preventDefault();
+
+    // ── FIX: Validar checkbox de términos ──
+    const chkTerminos = document.getElementById('chkTerminos');
+    const chkError    = document.getElementById('chkError');
+    if (!chkTerminos.checked) {
+      chkError.classList.remove('d-none');
+      chkTerminos.focus();
+      return;
+    }
+    chkError.classList.add('d-none');
 
     const proposito = document.getElementById('proposito').value;
     const ingresos  = parseFloat(document.getElementById('ingresos').value);
@@ -310,18 +742,44 @@
     const tasa      = parseFloat(document.getElementById('selectTasa').value);
     const cuota     = calcularCuota(monto, plazo, tasa);
 
+    // Validar propósito
+    if (!proposito) {
+      showToast('Selecciona el propósito del préstamo.', 'warning');
+      document.getElementById('proposito').focus();
+      return;
+    }
+
+    // Validar ingresos requeridos
+    if (!ingresos || ingresos <= 0) {
+      showToast('Ingresa tus ingresos mensuales.', 'warning');
+      document.getElementById('ingresos').focus();
+      return;
+    }
+
+    // Advertencia de capacidad de pago: bloquear si excede el 35%
+    if (!validarCapacidadPago(cuota, ingresos)) {
+      showToast('La cuota supera el 35% de tus ingresos. Ajusta el monto o el plazo.', 'danger');
+      return;
+    }
+
+    // Mostrar spinner
     document.getElementById('btnSolText').classList.add('d-none');
     document.getElementById('btnSolSpinner').classList.remove('d-none');
 
-    const { data, error } = await supabase.from('solicitudes_prestamo').insert({
-      user_id:       user.id,
-      monto,
-      plazo_meses:   plazo,
-      tasa_anual:    tasa,
-      cuota_mensual: parseFloat(cuota.toFixed(2)),
-      proposito,
-      estado:        'pendiente'
-    }).select().single();
+    // Insertar en Supabase (RF-24)
+    const { data, error } = await supabase
+      .from('solicitudes_prestamo')
+      .insert({
+        user_id:       user.id,
+        monto,
+        plazo_meses:   plazo,
+        tasa_anual:    tasa,
+        cuota_mensual: parseFloat(cuota.toFixed(2)),
+        proposito,
+        estado:        'pendiente'
+      })
+      .select()
+      .single();
 
     document.getElementById('btnSolText').classList.remove('d-none');
     document.getElementById('btnSolSpinner').classList.add('d-none');
@@ -331,50 +789,153 @@
       return;
     }
 
-    // Mostrar modal de éxito con UUID
+    // Mostrar modal de éxito con UUID (RF-25)
     document.getElementById('numSolicitud').textContent = data.id.slice(0, 8).toUpperCase();
     document.getElementById('exitoMonto').textContent   = formatSoles(monto);
     document.getElementById('exitoCuota').textContent   = formatSoles(cuota);
     modalExito.show();
+
+    // Limpiar y refrescar
     document.getElementById('formPrestamo').reset();
+    chkTerminos.checked = false;
+    document.getElementById('alertaIngresos').style.display = 'none';
+    // Limpiar LS ya que la solicitud fue enviada
+    try { localStorage.removeItem(LS_KEY); } catch (_) {}
     actualizar();
     cargarSolicitudes();
   });
 
-  // ── Historial de solicitudes ───────────────────────────
+  /* ───────────────────────────────────────────────────────
+     MODAL DE ESTADO — Etapas del proceso (MEJORA)
+  ─────────────────────────────────────────────────────── */
+  const ETAPAS = [
+    { clave: 'recibida',   label: 'Solicitud recibida',     desc: 'Tu solicitud ingresó al sistema.' },
+    { clave: 'revision',   label: 'En revisión',            desc: 'Estamos verificando tu información.' },
+    { clave: 'evaluacion', label: 'En evaluación',          desc: 'Análisis de riesgo crediticio en curso.' },
+    { clave: 'decision',   label: 'Decisión',               desc: 'Se emitirá una respuesta pronto.' },
+    { clave: 'resultado',  label: 'Aprobado / Rechazado',   desc: 'Te notificaremos por correo.' }
+  ];
+
+  // Mapa: estado BD → índice de etapa activa
+  const ESTADO_ETAPA = {
+    pendiente:  2, // "En evaluación"
+    aprobado:   4,
+    rechazado:  4
+  };
+
+  const ESTADO_COLOR = {
+    pendiente:  'warning',
+    aprobado:   'success',
+    rechazado:  'danger'
+  };
+
+  const ESTADO_LABEL = {
+    pendiente:  'En evaluación',
+    aprobado:   'Aprobado',
+    rechazado:  'Rechazado'
+  };
+
+  function renderEtapas(estadoBD) {
+    const etapaActiva = ESTADO_ETAPA[estadoBD] ?? 2;
+    const esRechazado = estadoBD === 'rechazado';
+    let html = '';
+
+    ETAPAS.forEach((etapa, idx) => {
+      let claseIcono, icono;
+      if (idx < etapaActiva) {
+        claseIcono = 'completada';
+        icono = 'bi-check-lg';
+      } else if (idx === etapaActiva) {
+        claseIcono = esRechazado ? 'pendiente-e' : 'activa';
+        icono = esRechazado ? 'bi-x-lg' : 'bi-hourglass-split';
+      } else {
+        claseIcono = 'pendiente-e';
+        icono = 'bi-circle';
+      }
+
+      const lineaClase = idx < etapaActiva ? 'completada' : '';
+      const labelExtra = idx === etapaActiva
+        ? `<span class="badge bg-${ESTADO_COLOR[estadoBD]} ms-2" style="font-size:.65rem">${ESTADO_LABEL[estadoBD]}</span>`
+        : '';
+
+      html += `
+        <div class="etapa-item">
+          <div class="d-flex flex-column align-items-center">
+            <div class="etapa-icono ${claseIcono}">
+              <i class="bi ${icono}"></i>
+            </div>
+            ${idx < ETAPAS.length - 1 ? `<div class="etapa-linea ${lineaClase}"></div>` : ''}
+          </div>
+          <div class="pt-1">
+            <div class="small fw-semibold">${etapa.label} ${labelExtra}</div>
+            <div class="text-muted" style="font-size:.75rem">${etapa.desc}</div>
+          </div>
+        </div>`;
+    });
+
+    return html;
+  }
+
+  const modalEstado   = new bootstrap.Modal(document.getElementById('modalEstado'));
+  let solicitudActual = null;
+
+  function abrirModalEstado(sol) {
+    solicitudActual = sol;
+    document.getElementById('estadoNumSolicitud').textContent = sol.id.slice(0, 8).toUpperCase();
+    document.getElementById('estadoMonto').textContent        = formatSoles(sol.monto);
+    document.getElementById('estadoFecha').textContent        = formatFecha(sol.created_at);
+    document.getElementById('etapasContainer').innerHTML      = renderEtapas(sol.estado);
+    modalEstado.show();
+  }
+
+  /* ───────────────────────────────────────────────────────
+     HISTORIAL DE SOLICITUDES (MEJORA: botón "Ver estado")
+  ─────────────────────────────────────────────────────── */
   async function cargarSolicitudes() {
     const { data: sols } = await supabase
-      .from('solicitudes_prestamo').select('*')
+      .from('solicitudes_prestamo')
+      .select('*')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(5);
 
     const el = document.getElementById('listaSolicitudes');
+
     if (!sols || sols.length === 0) {
       el.innerHTML = `<p class="text-muted text-center py-3 small">Sin solicitudes previas.</p>`;
       return;
     }
 
-    const estadoColor = { pendiente: 'warning', aprobado: 'success', rechazado: 'danger' };
     el.innerHTML = `
       <ul class="list-group list-group-flush">
         ${sols.map(s => `
-          <li class="list-group-item d-flex justify-content-between align-items-center px-3">
+          <li class="list-group-item d-flex justify-content-between align-items-center px-3"
+              data-id="${s.id}">
             <div>
               <div class="fw-semibold small">${formatSoles(s.monto)} · ${s.plazo_meses} meses</div>
               <div class="text-muted" style="font-size:.75rem">
-                ID: ${s.id.slice(0,8).toUpperCase()} · ${formatFecha(s.created_at)}
+                ID: ${s.id.slice(0, 8).toUpperCase()} · ${formatFecha(s.created_at)}
               </div>
             </div>
-            <span class="badge bg-${estadoColor[s.estado] || 'secondary'} text-capitalize">
-              ${s.estado}
-            </span>
+            <button class="btn btn-sm btn-outline-secondary btn-ver-estado"
+                    data-sol='${JSON.stringify(s)}'>
+              <i class="bi bi-activity me-1"></i>Ver estado
+            </button>
           </li>
         `).join('')}
       </ul>`;
+
+    // Delegación de eventos para botones "Ver estado"
+    el.querySelectorAll('.btn-ver-estado').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const sol = JSON.parse(btn.dataset.sol);
+        abrirModalEstado(sol);
+      });
+    });
   }
 
   cargarSolicitudes();
+
 </script>
 </body>
 </html>
