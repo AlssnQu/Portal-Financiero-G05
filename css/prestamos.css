@@ -1,0 +1,45 @@
+/* ============================================================
+   css/prestamos.css — Estilos específicos de Préstamos
+   ============================================================ */
+
+/* ── Tabla de amortización (solo visible al imprimir) ── */
+@media print {
+  body * { visibility: hidden; }
+  #seccionAmortizacion, #seccionAmortizacion * { visibility: visible; }
+  #seccionAmortizacion { position: fixed; inset: 0; padding: 2rem; }
+  .btn-imprimir-hide { display: none !important; }
+}
+
+/* ── Alerta de capacidad de pago ── */
+#alertaIngresos { display: none; }
+
+/* ── Etapas del estado de solicitud ── */
+.etapa-item {
+  display: flex;
+  align-items: flex-start;
+  gap: .75rem;
+  padding: .6rem 0;
+}
+.etapa-icono {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: .9rem;
+}
+.etapa-icono.completada  { background: #d1fae5; color: #065f46; }
+.etapa-icono.activa      { background: #fef3c7; color: #92400e; }
+.etapa-icono.pendiente-e { background: #f3f4f6; color: #9ca3af; }
+.etapa-linea {
+  width: 2px;
+  height: 1.2rem;
+  background: #e5e7eb;
+  margin-left: .9375rem;
+}
+.etapa-linea.completada  { background: #6ee7b7; }
+
+/* ── Gráfico ── */
+#chartWrapper { position: relative; height: 180px; }

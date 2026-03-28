@@ -1,0 +1,9 @@
+/* ============================================================
+   css/transacciones.css — Estilos específicos de Transacciones
+   ============================================================ */
+
+/* ── Tabla transacciones ── */
+.badge-debito  { background-color: #fde8e8; color: var(--color-debito); }
+.badge-credito { background-color: #e6f4ea; color: var(--color-credito); }
+.monto-debito  { color: var(--color-debito);  font-weight: 600; }
+.monto-credito { color: var(--color-credito); font-weight: 600; }

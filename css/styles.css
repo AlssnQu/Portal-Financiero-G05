@@ -1,0 +1,206 @@
+/* ============================================================
+   css/styles.css — Identidad Visual Global (Banca Privada VIP)
+   ============================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* ── 1. Variables de Marca (Estilo VIP) ── */
+:root {
+  --color-primario: #111111;     /* Negro Profundo / Ébano */
+  --color-secundario: #3A2618;   /* Marrón oscuro / Espresso */
+  --color-acento: #D4AF37;       /* Dorado Clásico */
+  --color-acento-hover: #B5952F; /* Dorado oscurecido para hovers */
+  
+  --color-fondo: #F9F8F6;        /* Blanco cálido / Tono marfil */
+  --color-texto: #1A1A1A;
+  --color-texto-light: #665D56;
+  
+  --color-exito: #2E7D32;        /* Verde bosque (sobrio) */
+  --color-debito: #C62828;       /* Rojo carmesí oscuro */
+  --color-credito: #2E7D32;    
+
+  --sidebar-width: 260px;
+  --navbar-height: 60px;
+
+  /* Variables de diseño premium */
+  --sombra-card: 0 4px 15px rgba(0, 0, 0, 0.04);
+  --sombra-hover: 0 10px 30px rgba(17, 17, 17, 0.08);
+  --border-radius-lg: 12px;
+  --border-radius-md: 6px;
+  --transition-fast: all 0.2s ease-out;
+  --transition-smooth: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+/* ── 2. Definición de Animaciones (Keyframes) ── */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes slideUpIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.animate-fade-in { animation: fadeIn var(--transition-smooth); }
+.animate-slide-up { animation: slideUpIn var(--transition-smooth) forwards; }
+.animate-scale-in { animation: scaleIn 0.3s var(--transition-smooth); }
+
+/* ── 3. Reset y Base ── */
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background-color: var(--color-fondo);
+  color: var(--color-texto);
+  margin: 0;
+  overflow-x: hidden;
+  animation: fadeIn 0.5s ease-in;
+}
+
+h1, h2, h3, h4, h5, h6, .navbar-brand {
+  font-weight: 700;
+  color: var(--color-primario);
+  letter-spacing: -0.5px;
+}
+
+/* ── 4. Botones Premium VIP ── */
+.btn-primary {
+  background-color: var(--color-acento);
+  color: var(--color-primario) !important; /* Texto oscuro sobre dorado */
+  border-color: var(--color-acento);
+  border-radius: var(--border-radius-md);
+  padding: 0.6rem 1.5rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  transition: var(--transition-fast);
+  box-shadow: 0 4px 10px rgba(212, 175, 55, 0.2);
+}
+
+.btn-primary:hover {
+  background-color: var(--color-acento-hover);
+  border-color: var(--color-acento-hover);
+  color: var(--color-primario) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(212, 175, 55, 0.35);
+}
+
+.btn-outline-light {
+  border-radius: var(--border-radius-md);
+  transition: var(--transition-fast);
+  border-color: var(--color-primario);
+  color: var(--color-primario);
+}
+.btn-outline-light:hover {
+  background-color: var(--color-primario);
+  color: #fff;
+}
+
+/* ── 5. Layout y Navbar ── */
+.navbar-banco {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%;
+  height: var(--navbar-height);
+  z-index: 1030;
+  background-color: #fff !important;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+  border-bottom: 1px solid #eaeaea;
+  display: flex;
+  align-items: center;
+}
+.navbar-banco .navbar-brand {
+  font-size: 1.4rem;
+  display: flex;
+  align-items: center;
+  color: var(--color-primario) !important;
+}
+.navbar-banco .navbar-brand i { color: var(--color-acento); }
+.navbar-banco .nav-link { color: var(--color-texto-light) !important; }
+.navbar-banco .nav-link:hover { color: var(--color-primario) !important; }
+#userName { color: var(--color-primario); font-weight: 600; }
+
+.portal-layout { display: flex; min-height: 100vh; }
+
+.sidebar {
+  position: fixed;
+  top: var(--navbar-height);
+  left: 0;
+  width: var(--sidebar-width);
+  height: calc(100vh - var(--navbar-height));
+  background: var(--color-primario); /* Negro profundo */
+  padding: 2rem 1rem;
+  overflow-y: auto;
+  z-index: 1020;
+  border-right: 1px solid rgba(255,255,255,0.05);
+}
+.sidebar .nav-link {
+  color: rgba(255,255,255,0.7);
+  padding: 0.8rem 1rem;
+  border-radius: var(--border-radius-md);
+  margin-bottom: 0.3rem;
+  transition: var(--transition-fast);
+  display: flex;
+  align-items: center;
+  font-weight: 500;
+}
+.sidebar .nav-link i {
+  font-size: 1.1rem;
+  margin-right: 12px;
+  transition: var(--transition-fast);
+}
+.sidebar .nav-link:hover {
+  background-color: rgba(255,255,255,0.05);
+  color: #fff;
+}
+.sidebar .nav-link.active {
+  background-color: var(--color-secundario); /* Marrón espresso */
+  color: var(--color-acento); /* Texto dorado */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  border-left: 3px solid var(--color-acento);
+}
+
+.main-content {
+  flex: 1;
+  margin-top: var(--navbar-height); 
+  margin-left: var(--sidebar-width); 
+  padding: 2rem 3rem;
+  overflow-x: hidden;
+  animation: slideUpIn 0.4s var(--transition-smooth);
+}
+
+/* ── 6. Cards Globales ── */
+.card {
+  border: none;
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--sombra-card);
+  transition: var(--sombra-hover);
+  background-color: #fff;
+  animation: scaleIn 0.3s ease-out; 
+}
+
+/* ── 7. Utilidades (Tablas, Badges, Spinner) ── */
+.table { border-radius: var(--border-radius-md); overflow: hidden; }
+.table-dark { background-color: var(--color-primario); }
+.text-primary { color: var(--color-acento) !important; }
+.bg-primary { background-color: var(--color-acento) !important; }
+.badge.bg-success { background-color: var(--color-exito) !important; }
+.list-group-item { transition: var(--transition-fast); }
+.list-group-item:hover { background-color: #f8fafc; transform: translateX(3px); }
+
+#loadingSpinner {
+  position: fixed; inset: 0;
+  background: rgba(255,255,255,.8);
+  backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 9999;
+}
+.toast-container { z-index: 9999; }
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .sidebar { display: none; }
+  .main-content { margin-left: 0; padding: 1.5rem 1rem; }
+}

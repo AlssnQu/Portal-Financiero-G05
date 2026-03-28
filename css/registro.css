@@ -1,0 +1,27 @@
+/* ============================================================
+   css/registro.css — Estilos específicos para Registro (VIP)
+   ============================================================ */
+.auth-wrapper {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Degradado VIP: De negro profundo a marrón espresso */
+  background: linear-gradient(135deg, #111111 0%, #3A2618 100%);
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+  border: none;
+  border-radius: 12px;
+  box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+  background: #ffffff;
+}
+
+.auth-logo {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--color-primario);
+  letter-spacing: 1px;
+}

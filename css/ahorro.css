@@ -1,0 +1,13 @@
+/* ============================================================
+   css/ahorro.css — Estilos específicos de Ahorro
+   ============================================================ */
+
+/* ── Barra de progreso ahorro ── */
+.progress { 
+  height: 14px; 
+  border-radius: 99px; 
+}
+
+.progress-bar-ahorro {
+  background: linear-gradient(90deg, #198754, #5cb85c);
+}
